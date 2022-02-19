@@ -69,7 +69,7 @@ class Player:
 
     def clamp_to_level_edge(self, level_size):
         """In case player gets to the edge of the world/level, clamp his position
-        to edges of the level"""
+        said edge"""
         self.rect.left = max(self.rect.left, 0)
         self.rect.right = min(self.rect.right, level_size[0])
         self.rect.top = max(self.rect.top, 0)
@@ -100,7 +100,6 @@ class Player:
         # Calculates player's y coordinate and overwrites it in case the new value would
         # push a player into a physical tile
         self.rect.y += self.y_movement
-        # self.jump_ability = 0
         # collision_test ran again to check for collisions after establishing x value, to calculate y value
         for tile in self.collision_test(tile_rects):
             if self.y_movement > 0:

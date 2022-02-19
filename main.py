@@ -19,10 +19,9 @@ def main():
     images = setup_lib.load_images(src_dir)
     tile_size = images["dirt"].get_width()
     # Creating a level
-    level = levels_lib.Level(level_size=(32, 32))
+    level = levels_lib.Level(game_canvas, level_size=(64, 32))
     level.generate_level_file(src_dir)
     level.load()
-    level.create_tile_map_surface(images)
     # Setting up the player object
     player = player_lib.Player((100, 100), speed=3)
     # Setting up camera following the player
@@ -52,13 +51,12 @@ def main():
             level.tile_rect_map, (level.rows * tile_size, level.columns * tile_size)
         )
         camera.update(
-            player, game_canvas.get_size(), (level.rows, level.columns), tile_size
+            player, game_canvas.get_size(), (level.rows * tile_size, level.columns * tile_size)
         )
 
         # Drawing things onto screen
         game_canvas.fill((100, 100, 255))
-        # level.draw_tile_map(game_canvas, images, camera)
-        game_canvas.blit(level.tile_map_surf, (-camera.x, -camera.y))
+        level.update_surface(images, camera, game_canvas) #Also blits tile map onto game_canvas
         game_canvas.blit(player.sprite, camera.player_pos)
         # translating game canvas onto entire game window
         window.blit(pygame.transform.scale(game_canvas, window.get_size()), (0, 0))
