@@ -1,7 +1,6 @@
 import pygame, os
 import levels_lib, player_lib, setup_lib, camera_lib
 
-
 def main():
     # Creating settings.json file
     setup_lib.set_settings(
@@ -16,22 +15,41 @@ def main():
     # Setting up pygame clock object responsible for handling FPS
     clock = pygame.time.Clock()
     # Getting assets
-    images = setup_lib.load_images(src_dir)
-    tile_size = images["dirt"].get_width()
+    animated_entities = []
+    #images = setup_lib.load_images(src_dir)
+    tile_images = setup_lib.load_images(src_dir, "tiles")
+    tile_size = tile_images["dirt"].get_width()
+
+    player_images = setup_lib.load_images(src_dir, "player")
     # Creating a level
-    level = levels_lib.Level(game_canvas, level_size=(64, 32))
-    level.generate_level_file(src_dir)
-    level.load()
+    CHUNK_SIZE = 8
+    #Finite level
+    # level = levels_lib.Level(game_canvas, level_size=(64, 32), chunk_size=CHUNK_SIZE)
+    # level.generate_level_file(src_dir)
+    # level.load()
+    #Infinite level
+    level_dbg = levels_lib.LevelInf(game_canvas)
     # Setting up the player object
-    player = player_lib.Player((100, 100), speed=3)
+    player = player_lib.Player((100, 100), player_images, speed=3)
+    player.setup_animations()
+    #Animations
+    
     # Setting up camera following the player
     camera = camera_lib.Camera()
 
     pygame.init()
+    #sounds
+    jump_sound = pygame.mixer.Sound(os.path.join(src_dir, "sounds", "jump.wav"))
+    player.sounds["jump"] = jump_sound
+    # pygame.mixer.music.load(os.path.join(src_dir, "sounds", "The Seatbelts - Cats on Mars-97xfV6yXcrk.mp3"))
+    # pygame.mixer.music.play(-1)
+    animated_entities.append(player)
+
     running = True
     while running:
         clock.tick(60)
-        # Event loop
+        print(clock.get_fps())
+        #* Event loop
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -46,17 +64,26 @@ def main():
             if event.type == pygame.KEYUP:
                 player.eval_inputs(event)
 
-        # Calculating physics
-        player.update(
-            level.tile_rect_map, (level.rows * tile_size, level.columns * tile_size)
-        )
-        camera.update(
-            player, game_canvas.get_size(), (level.rows * tile_size, level.columns * tile_size)
-        )
+        #* Calculating physics
+        #finite level
+        # player.update(
+        #     level.tile_rect_map, (level.rows * tile_size, level.columns * tile_size)
+        # )
+        # camera.update(
+        #     player, game_canvas.get_size(), (level.rows * tile_size, level.columns * tile_size)
+        # )
+        #infinite level
+        player.update(level_dbg.collision_map)
+        camera.update(player, game_canvas.get_size())       
 
-        # Drawing things onto screen
+        #* Drawing things onto screen
         game_canvas.fill((100, 100, 255))
-        level.update_surface(images, camera, game_canvas) #Also blits tile map onto game_canvas
+        level_dbg.load_chunks(game_canvas, camera, tile_images)
+        #level.update_surface(tile_images, camera, game_canvas) #Also blits tile map onto game_canvas
+        #animations
+        for anim_entity in animated_entities:
+            anim_entity.animate()
+
         game_canvas.blit(player.sprite, camera.player_pos)
         # translating game canvas onto entire game window
         window.blit(pygame.transform.scale(game_canvas, window.get_size()), (0, 0))

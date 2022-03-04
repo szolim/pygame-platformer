@@ -22,6 +22,7 @@ class Camera:
         edge. The camera.player_pos is then equal to player.rect coordinates,
         while camera coordinates stay tuned with player position, but are capped
         so we don't see beyond the level grid."""
+        #For finite level
         # self.x is always >= 0 and <= x_max; it is == 0 when player.rect.x < vertical_equator
         #and it is == x_max when player.rect.x > level_size - game_canvas size==camera rect size
         # vertical equator splits the screen in left and right half
@@ -39,7 +40,7 @@ class Camera:
         else:
             self.player_pos[1] = player.rect.y
 
-    def update(self, player, surface_size, level_size):
+    def update(self, player, surface_size, level_size=0):
         """Updates camera position which is used to calculate
         where to blit all the surfaces we want to draw onto our
         game canvas. Player stays in the middle of the screen,
@@ -53,17 +54,26 @@ class Camera:
         )
         vertical_equator = surface_size[0] / 2 - player_width / 2
         horizontal_equator = surface_size[1] / 2 - player_height / 2
-        #Max possible camera coord values determined by level size
-        #Camera captures surface from its coordinates up to the surface_size coordinates
-        #thus we subtract the size of screen captured by camera from max possible coords.
-        #camera_x_max = level's x size - game canvas size; the same applies to y coordinate.
-        camera_x_max = max(0, level_size[0] - surface_size[0])
-        camera_y_max = max(0, level_size[1] - surface_size[1])
-        # calculating camera and player positions
-        self.x = min(
-            max(player.rect.x - vertical_equator, 0), camera_x_max
-        )
-        self.y = min(
-            max(player.rect.y - horizontal_equator, 0), camera_y_max
-        )
-        self.eval_player_pos(vertical_equator, horizontal_equator, player, camera_x_max, camera_y_max)
+        
+        if level_size == 0:
+            #For infinite level size
+            self.x = player.rect.x - vertical_equator
+            self.y = player.rect.y - horizontal_equator
+            self.player_pos[0] = vertical_equator
+            self.player_pos[1] = horizontal_equator
+        else:
+            #Finite level size
+            #Max possible camera coord values determined by level size
+            #Camera captures surface from its coordinates up to the surface_size coordinates
+            #thus we subtract the size of screen captured by camera from max possible coords.
+            #camera_x_max = level's x size - game canvas size; the same applies to y coordinate.
+            camera_x_max = max(0, level_size[0] - surface_size[0])
+            camera_y_max = max(0, level_size[1] - surface_size[1])
+            # calculating camera and player positions
+            self.x = min(
+                max(player.rect.x - vertical_equator, 0), camera_x_max
+            )
+            self.y = min(
+                max(player.rect.y - horizontal_equator, 0), camera_y_max
+            )
+            self.eval_player_pos(vertical_equator, horizontal_equator, player, camera_x_max, camera_y_max)

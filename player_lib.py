@@ -1,8 +1,8 @@
-import pygame
+import pygame, spritesheet
 
 
-class Player:
-    def __init__(self, pos, speed=2) -> None:
+class Player():
+    def __init__(self, pos, images, speed=2) -> None:
         """Create an instance of Player object, consisting of
         pygame.Surface, pygame.Rects and all the variables
         used by physics engine"""
@@ -11,6 +11,16 @@ class Player:
         self.sprite.set_colorkey((0, 0, 0))
         self.rect = self.sprite.get_rect()
         self.rect.x, self.rect.y = pos[0], pos[1]
+        #Animation; first word in name of every file in images/player should be here
+        self.animation_keys = images
+        self.animations = {}
+        self.active_animation = None
+        self.previous_animation = None
+        self.frame_index = 0
+        self.frame_timer = 0
+        self.flip = [False, False]
+        #Sounds
+        self.sounds = {}
         # Inputs
         self.inputs = {"jump": 0, "squat": 0, "left": 0, "right": 0}
         # Physics and render engine variables
@@ -20,6 +30,13 @@ class Player:
         self.jump_ability = 0
         self.momentum = 0
         self.g_force = 0.14
+
+    def setup_animations(self):
+        for key, value in self.animation_keys.items():
+            frames = spritesheet.Spritesheet(value, (32,32), (16,16)).get_frames()
+            for frame in frames:
+                frame.set_colorkey((0,0,0))
+            self.animations[key] = frames
 
     def eval_inputs(self, event):
         """For every pressed or released key, check if player has an action
@@ -65,17 +82,50 @@ class Player:
 
         if self.jump_ability > 0 and y_input == -1:
             self.momentum = -3
+            self.y_movement = self.momentum
             self.jump_ability -= 1
+            pygame.mixer.Sound.play(self.sounds["jump"])
 
     def clamp_to_level_edge(self, level_size):
         """In case player gets to the edge of the world/level, clamp his position
-        said edge"""
+        to said edge"""
         self.rect.left = max(self.rect.left, 0)
         self.rect.right = min(self.rect.right, level_size[0])
         self.rect.top = max(self.rect.top, 0)
         self.rect.bottom = min(self.rect.bottom, level_size[1])
 
-    def update(self, tile_rects, level_size) -> None:
+    def animate(self):
+        """Checks any changes in active animation, updates the state of
+        animation and assigns it to player sprite(surface actually)."""
+        if self.active_animation == None:
+            self.active_animation = "idle"
+        if self.x_movement != 0:
+            self.active_animation = "run"
+        else:
+            self.active_animation = "idle"
+        
+        animation_changed = self.active_animation != self.previous_animation
+        if animation_changed:
+            self.frame_index = 0
+
+        if self.frame_timer <= 0:
+            if self.frame_index + 1 == len(self.animations[self.active_animation]):
+                self.frame_index = 0
+            else:
+                self.frame_index += 1
+            self.frame_timer = 7
+        self.frame_timer -= 1
+
+        self.sprite = self.animations[self.active_animation][self.frame_index]
+        #Handling horizontal and vertical mirroring
+        if self.x_movement < 0:
+            self.flip[0] = True
+        else:
+            self.flip[0] = False
+        self.sprite = pygame.transform.flip(self.sprite, self.flip[0], self.flip[1])
+        self.previous_animation = self.active_animation
+
+    def update(self, tile_rects, level_size=0) -> None:
         """Updates state of the player. Calls eval_movement to update how the
         player should move according to inputs and physics. Adds the values calculated
         in eval_movement one at a time and applies collisions. First checks movement and
@@ -83,7 +133,7 @@ class Player:
         self.eval_movement()  # calculate movement
 
         # reset collision that player has with environment
-        collision_types = {"top": False, "bottom": False, "right": False, "left": False}
+        self.collision_types = {"top": False, "bottom": False, "right": False, "left": False}
 
         # Calculates player's x coordinate and overwrites it in case the new value would
         # push a player into a physical tile
@@ -92,10 +142,10 @@ class Player:
         for tile in self.collision_test(tile_rects):
             if self.x_movement > 0:
                 self.rect.right = tile.left
-                collision_types["right"] = True
+                self.collision_types["right"] = True
             if self.x_movement < 0:
                 self.rect.left = tile.right
-                collision_types["left"] = True
+                self.collision_types["left"] = True
 
         # Calculates player's y coordinate and overwrites it in case the new value would
         # push a player into a physical tile
@@ -107,11 +157,47 @@ class Player:
                 if self.jump_ability == 0:
                     self.momentum = 0
                     self.jump_ability = 1
-                collision_types["bottom"] = True
+                self.collision_types["bottom"] = True
             if self.y_movement < 0:
                 self.rect.top = tile.bottom
                 self.momentum = 0
-                collision_types["top"] = True
+                self.collision_types["top"] = True
 
         # Screen edge collisions
-        self.clamp_to_level_edge(level_size)
+        if level_size != 0:
+            self.clamp_to_level_edge(level_size)
+
+
+# class Entity():
+#     def __init__(self, pos, images, speed=2) -> None:
+#         """Create an Entity object, consisting of
+#         pygame.Surface, pygame.Rects, images and all the variables
+#         used by physics engine"""
+#         # Pygame surf and rect object setup
+#         self.sprite = pygame.image.load(images["idle"][0])
+#         self.sprite.set_colorkey((0, 0, 0))
+#         self.rect = self.sprite.get_rect()
+#         #Where is object in the game world
+#         self.rect.x, self.rect.y = pos[0], pos[1]
+#         #Sounds
+#         self.sounds = {}
+#         # Physics and render engine variables
+#         self.speed = speed
+#         self.x_movement = 0
+#         self.y_movement = 0
+#         self.jump_ability = 0
+#         self.momentum = 0
+#         self.g_force = 0.14
+
+
+# class AnimatedEntity(Entity):
+#     def __init__(self, pos, images, speed=2) -> None:
+#         super().__init__(pos, images, speed)
+#         #Animation; 
+#         self.animation_keys = images
+#         self.animations = {}
+#         self.active_animation = None
+#         self.previous_animation = None
+#         self.frame_index = 0
+#         self.frame_timer = 0
+#         self.flip = [False, False]
