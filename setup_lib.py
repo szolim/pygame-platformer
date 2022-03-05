@@ -1,8 +1,4 @@
-from email.mime import image
 import os, pygame, json
-from numpy import imag
-from typing import OrderedDict
-
 
 def set_settings(json_file):
     """Save all the general settings to a json file"""
